@@ -49,11 +49,11 @@ if __name__ == '__main__':
     print('Endpoints: /linpeas, /winpeas, /revshell and /revshell/<port>')
     cli = sys.modules['flask.cli']
     cli.show_server_banner = lambda *x: None
-    interfaces = ['tun0', 'eth0', 'wlan0']
-    for i in interfaces:
-      if i in net_interfaces:
-        print(f"Your ip is: {ifaddresses(i)[2][0]['addr']}")
-        break
+    try:
+      interface = next(filter(lambda x: x in net_interfaces, ['tun0', 'eth0', 'wlan0']))
+      print(f"Your ip is: {ifaddresses(interface)[2][0]['addr']}")
+    except StopIteration:
+      print('We couldn\'t find your net interface :(')
     if len(sys.argv) > 1 and int(sys.argv[1]) < 65535 and int(sys.argv[1]) >= 1:
       try:
         app.run(host='0.0.0.0', port=sys.argv[1])
